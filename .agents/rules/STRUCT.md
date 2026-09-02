@@ -46,7 +46,7 @@ Full detail: `backend/.claude/rules/struct.md`
 | Cache | Redis |
 | Message Broker | RabbitMQ |
 | Build | Maven (`./mvnw`) |
-| Migrations | Flyway (18 migrations, V01–V18) |
+| Migrations | Flyway (89 migrations, V01-V89) |
 | Resilience | Resilience4j (Spring Cloud 2025.1.1) |
 | Security | Spring Security 6, JWT |
 | ORM | Spring Data JPA / Hibernate |
@@ -61,19 +61,34 @@ Architecture: **Modular Monolith**.
 
 ### Module Roster
 
-| Module | Status |
-|--------|--------|
-| `auth` | Implemented |
-| `mail` | Implemented |
-| `users`, `social`, `media`, `post`, `comment` | Empty scaffolds |
-| `hashtag`, `story`, `notification`, `message` | Empty scaffolds |
-| `report`, `admin`, `recommendation` | Empty scaffolds |
+All fourteen modules are implemented; none is an empty scaffold.
+
+| Module | Responsibility |
+|--------|----------------|
+| `auth` | Login, register, Google OAuth2, JWT refresh, password reset, email verification |
+| `mail` | Transactional email via Resend; auth mail and the separate moderation notice path |
+| `users` | Public and private profiles, settings, role and status management |
+| `social` | Follow graph with pending requests for private accounts, block list |
+| `media` | Pre-signed Cloudflare R2 upload URLs, media asset lifecycle |
+| `post` | Post CRUD, likes, saves, views, edit history, Elasticsearch sync |
+| `comment` | Threaded comments, likes, moderation, live WebSocket fanout |
+| `hashtag` | Normalisation, trending, Elasticsearch sync, active/banned/deleted lifecycle |
+| `story` | 24-hour stories, views, likes, expiry and cleanup |
+| `notification` | Notification persistence, retrieval and live delivery |
+| `message` | Direct conversations and messages, live delivery |
+| `report` | User-submitted content flags and their triage lifecycle |
+| `admin` | Moderation audit log, discipline ladder, hashtag registry, statistics |
+| `recommendation` | `user_events` and the Gorse-backed ranked feed |
+
+See `backend/.claude/rules/struct.md` for each module's sub-packages and
+`backend/docs/modules/{module}/DATA_RULES.md` for its data rules.
 
 ### Infrastructure Services
 
-- **PostgreSQL** (docker-compose): canonical data store; 18 Flyway migrations
-- **Redis** (docker-compose): token blacklist, refresh tokens, rate limiting
-- **RabbitMQ** (docker-compose): async event delivery (no queues defined yet)
+- **PostgreSQL** (docker-compose): canonical data store; 89 Flyway migrations, ten of which build indexes `CONCURRENTLY` behind a `.sql.conf` sidecar
+- **Redis** (docker-compose): token blacklist, one-time email and password-reset tokens, rate limiting.
+  Refresh tokens are SHA-256 hashed in PostgreSQL, not Redis
+- **RabbitMQ** (docker-compose): async event delivery. 6 exchanges and 20 durable queues declared in `RabbitMqTopologyConfig`, driving 14 `@RabbitListener` consumers. `social.events` is the topic bus and `social.events.dlx` the dead-letter exchange; `comment.live.events`, `message.live.events`, `notification.live.events` and `post.live.events` are fanout tiers fed by exchange-to-exchange bindings
 - Swagger / OpenAPI at `/api-docs` (dev profile only)
 
 ### Flyway Migrations
@@ -81,7 +96,10 @@ Architecture: **Modular Monolith**.
 V01 extensions/enums → V02 users/auth → V03 settings/push → V04 social → V05 media →
 V06 posts → V07 comments → V08 hashtags → V09 stories → V10 notifications → V11 messages →
 V12 reports → V13 admin → V14 recommendation → V15 indexes → V16 triggers/functions →
-V17 views → V18 metadata config tables
+V17 views → V18 metadata config tables → V19-V91 incremental schema evolution
+
+The full V01-V89 table is in `backend/.claude/rules/struct.md`; it is maintained there rather than
+duplicated here, because a list in two places drifts in one of them.
 
 ### Redis Key Patterns
 
@@ -89,7 +107,7 @@ V17 views → V18 metadata config tables
 |---------|-----|---------|
 | `auth:token:email-verification:{sha256}` | 24h | Email verification token |
 | `auth:token:password-reset:{sha256}` | 15m | Password reset token |
-| `auth:blacklist:jti:{jti}` | remaining access token lifetime | Token blacklist |
+| `auth:blacklist:{jti}` | remaining access token lifetime | Token blacklist |
 | `app:{domain}:{id}` | varies | Single entries (planned) |
 | `app:{domain}:list` | varies | Collections (planned) |
 
@@ -126,10 +144,12 @@ src/
 │   └── ui/         # shadcn/ui primitives (Button, Input, Card, Label)
 ├── config/         # App constants, route paths, STALE_TIME, HTTP_STATUS
 ├── context/        # Reserved for React context providers
-├── features/
-│   ├── auth/       # Most complete slice — hooks, services, store, utils, components
-│   ├── dashboard/  # Authenticated dashboard stub
-│   └── luvax/      # Main app shell screens (Feed, Explore, Profile, Story, etc.)
+├── features/       # Five slices; sizes measured, not estimated
+│   ├── admin/      # Moderation panel: queue, discipline, hashtags, statistics (12708 lines)
+│   ├── auth/       # Login, register, OAuth2 callback, password reset (1526 lines)
+│   ├── luvax/      # Main app shell: Feed, Explore, Profile, Story (14686 lines)
+│   ├── messages/   # Direct conversations and live messaging (4272 lines)
+│   └── search/     # Search surface (678 lines)
 ├── hooks/          # Shared reusable hooks
 ├── pages/          # Route-level pages not yet in a feature module
 ├── routes/         # Central React Router config (createBrowserRouter)
@@ -150,12 +170,19 @@ src/
 | tailwindcss | ^4.3.0 | Utility CSS |
 | react-hook-form | ^7.76.0 | Form state management |
 | zod | ^4.4.3 | Schema validation |
-| lucide-react | ^1.16.0 | Icon set |
+| vite | ^8.0.12 | Build tool |
+| vitest | ^3.2.7 | Test runner |
+| eslint | ^10.3.0 | Linting |
+
+There is no icon-set dependency. The 38 declared packages contain no `lucide-react`, no
+`react-icons` and no `@heroicons`; an earlier revision of this document listed `lucide-react` and
+was wrong.
 
 ### Key Scripts
 
 ```bash
 npm run dev        # Start Vite dev server (via scripts/dev-server.mjs)
+npm run test       # Vitest
 npm run build      # Production build
 npm run lint       # ESLint
 npm run preview    # Preview production build
@@ -183,7 +210,7 @@ See `frontend/.env.example` for the full list.
 | Token | Storage | Notes |
 |-------|---------|-------|
 | Access token | In-memory (Zustand, not persisted) | Short-lived; cleared on tab close |
-| Refresh token | In-memory (Zustand, not persisted) | Planned migration to HttpOnly cookie |
+| Refresh token | HttpOnly cookie, never readable by JavaScript | `Secure`, `SameSite=Lax`, path-scoped to `/api/v1/auth` |
 | User + isAuthenticated | `localStorage` via Zustand persist | Key: `luvax-auth-session` |
 
 ### Shared Contracts
