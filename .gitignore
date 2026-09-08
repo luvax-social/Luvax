@@ -20,3 +20,9 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Agent working directory and browser-automation scratch output. Neither is project
+# content: .workspace/ is per-developer scratch by rule, and .playwright-mcp/ is a tool's
+# transcript of a test run.
+.workspace/
+.playwright-mcp/

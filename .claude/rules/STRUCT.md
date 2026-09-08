@@ -108,6 +108,9 @@ duplicated here, because a list in two places drifts in one of them.
 | `auth:token:email-verification:{sha256}` | 24h | Email verification token |
 | `auth:token:password-reset:{sha256}` | 15m | Password reset token |
 | `auth:blacklist:{jti}` | remaining access token lifetime | Token blacklist |
+| `auth:ws-ticket:{ticket}` | 30s | One-time WebSocket handshake ticket |
+| `comment:watchers:{postId}` | 300s | Live comment presence set |
+| `hashtag:trending:personalised:{userId}:{page}:{size}` | 10m | Personalised trending fusion result |
 | `app:{domain}:{id}` | varies | Single entries (planned) |
 | `app:{domain}:list` | varies | Collections (planned) |
 
