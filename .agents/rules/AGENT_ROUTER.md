@@ -8,7 +8,7 @@ Before any implementation task, determine your task scope and follow the routing
 
 | Task Scope | Required Reading (in order) |
 |------------|----------------------------|
-| Backend only | 1. This file  2. GLOBAL_RULES.md (root)  3. backend/.claude/rules/base.md  4. backend/.claude/rules/struct.md  5. backend/docs/modules/GLOBAL_RULES.md  6. backend/docs/modules/{module}/DATA_RULES.md (relevant module) |
+| Backend only | 1. This file  2. GLOBAL_RULES.md (root)  3. backend/.claude/rules/base.md  4. backend/.claude/rules/struct.md  5. backend/docs/modules/GLOBAL_RULES.md  6. backend/docs/modules/{module}/DATA_RULES.md (one of fifteen) |
 | Frontend only | 1. This file  2. GLOBAL_RULES.md (root)  3. frontend/.claude/rules/global_rules.md  4. frontend/.claude/rules/struct.md |
 | Full-stack (BE + FE) | 1. This file  2. GLOBAL_RULES.md (root)  3. All BE rules above  4. All FE rules above |
 | Infrastructure / CI | 1. This file  2. GLOBAL_RULES.md (root)  3. STRUCT.md (root) |

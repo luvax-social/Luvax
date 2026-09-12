@@ -46,12 +46,12 @@ Full detail: `backend/.claude/rules/struct.md`
 | Cache | Redis |
 | Message Broker | RabbitMQ |
 | Build | Maven (`./mvnw`) |
-| Migrations | Flyway (89 migrations, V01-V89) |
+| Migrations | Flyway (111 migrations, V01-V111) |
 | Resilience | Resilience4j (Spring Cloud 2025.1.1) |
 | Security | Spring Security 6, JWT |
 | ORM | Spring Data JPA / Hibernate |
 | Formatting | Spotless 2.46.1 (Google AOSP) |
-| Testing | JUnit 5, Testcontainers |
+| Testing | JUnit 5, Testcontainers; 264 test classes |
 
 ### Application Purpose
 
@@ -61,7 +61,7 @@ Architecture: **Modular Monolith**.
 
 ### Module Roster
 
-All fourteen modules are implemented; none is an empty scaffold.
+All fifteen modules are implemented; none is an empty scaffold.
 
 | Module | Responsibility |
 |--------|----------------|
@@ -79,16 +79,17 @@ All fourteen modules are implemented; none is an empty scaffold.
 | `report` | User-submitted content flags and their triage lifecycle |
 | `admin` | Moderation audit log, discipline ladder, hashtag registry, statistics |
 | `recommendation` | `user_events` and the Gorse-backed ranked feed |
+| `support` | Support tickets, the appeal route an unauthenticated disciplined account uses, and verification requests |
 
 See `backend/.claude/rules/struct.md` for each module's sub-packages and
 `backend/docs/modules/{module}/DATA_RULES.md` for its data rules.
 
 ### Infrastructure Services
 
-- **PostgreSQL** (docker-compose): canonical data store; 89 Flyway migrations, ten of which build indexes `CONCURRENTLY` behind a `.sql.conf` sidecar
+- **PostgreSQL** (docker-compose): canonical data store; 111 Flyway migrations, sixteen of which build indexes `CONCURRENTLY` behind a `.sql.conf` sidecar
 - **Redis** (docker-compose): token blacklist, one-time email and password-reset tokens, rate limiting.
   Refresh tokens are SHA-256 hashed in PostgreSQL, not Redis
-- **RabbitMQ** (docker-compose): async event delivery. 6 exchanges and 20 durable queues declared in `RabbitMqTopologyConfig`, driving 14 `@RabbitListener` consumers. `social.events` is the topic bus and `social.events.dlx` the dead-letter exchange; `comment.live.events`, `message.live.events`, `notification.live.events` and `post.live.events` are fanout tiers fed by exchange-to-exchange bindings
+- **RabbitMQ** (docker-compose): async event delivery. 6 exchanges and 20 durable queues declared in `RabbitMqTopologyConfig`, driving 14 `@RabbitListener` consumers. `social.events` is the topic bus and `social.events.dlx` the dead-letter exchange; `comment.live.events`, `message.live.events`, `notification.live.events` and `post.live.events` are fanout tiers fed by exchange-to-exchange bindings. The 14 consumer classes carry 21 `@RabbitListener` methods between them
 - Swagger / OpenAPI at `/api-docs` (dev profile only)
 
 ### Flyway Migrations
@@ -96,9 +97,9 @@ See `backend/.claude/rules/struct.md` for each module's sub-packages and
 V01 extensions/enums → V02 users/auth → V03 settings/push → V04 social → V05 media →
 V06 posts → V07 comments → V08 hashtags → V09 stories → V10 notifications → V11 messages →
 V12 reports → V13 admin → V14 recommendation → V15 indexes → V16 triggers/functions →
-V17 views → V18 metadata config tables → V19-V91 incremental schema evolution
+V17 views → V18 metadata config tables → V19-V111 incremental schema evolution
 
-The full V01-V89 table is in `backend/.claude/rules/struct.md`; it is maintained there rather than
+The full V01-V111 table is in `backend/.claude/rules/struct.md`; it is maintained there rather than
 duplicated here, because a list in two places drifts in one of them.
 
 ### Redis Key Patterns
@@ -108,6 +109,13 @@ duplicated here, because a list in two places drifts in one of them.
 | `auth:token:email-verification:{sha256}` | 24h | Email verification token |
 | `auth:token:password-reset:{sha256}` | 15m | Password reset token |
 | `auth:blacklist:{jti}` | remaining access token lifetime | Token blacklist |
+| `auth:ws-ticket:{ticket}` | 30s | One-time WebSocket handshake ticket |
+| `comment:watchers:{postId}` | 300s | Live comment presence set |
+| `hashtag:trending:personalised:{userId}:{page}:{size}` | 10m | Personalised trending fusion result |
+| `comment:slowmode:{postId}:{userId}` | the post's slow-mode interval | Per-user comment slow mode |
+| `auth:ratelimit:support:public:daily:{email}` | 24h sliding | Daily cap on the anonymous public support form |
+| `support:token:appeal:{sha256}` | 30d | Single-use appeal link from a moderation notice |
+| `support:token:confirmation:{sha256}` | 24h | Confirms the address a public support submission named |
 | `app:{domain}:{id}` | varies | Single entries (planned) |
 | `app:{domain}:list` | varies | Collections (planned) |
 
@@ -144,12 +152,13 @@ src/
 │   └── ui/         # shadcn/ui primitives (Button, Input, Card, Label)
 ├── config/         # App constants, route paths, STALE_TIME, HTTP_STATUS
 ├── context/        # Reserved for React context providers
-├── features/       # Five slices; sizes measured, not estimated
-│   ├── admin/      # Moderation panel: queue, discipline, hashtags, statistics (12708 lines)
-│   ├── auth/       # Login, register, OAuth2 callback, password reset (1526 lines)
-│   ├── luvax/      # Main app shell: Feed, Explore, Profile, Story (14686 lines)
-│   ├── messages/   # Direct conversations and live messaging (4272 lines)
-│   └── search/     # Search surface (678 lines)
+├── features/       # Six slices; sizes measured, not estimated
+│   ├── admin/      # Moderation panel: queue, discipline, hashtags, statistics (13795 lines)
+│   ├── auth/       # Login, register, OAuth2 callback, password reset (1629 lines)
+│   ├── luvax/      # Main app shell: Feed, Explore, Profile, Story (16796 lines)
+│   ├── messages/   # Direct conversations and live messaging (4913 lines)
+│   ├── search/     # Search surface (990 lines)
+│   └── support/    # Help centre, tickets, appeals, verification requests (2838 lines)
 ├── hooks/          # Shared reusable hooks
 ├── pages/          # Route-level pages not yet in a feature module
 ├── routes/         # Central React Router config (createBrowserRouter)
@@ -182,11 +191,25 @@ was wrong.
 
 ```bash
 npm run dev        # Start Vite dev server (via scripts/dev-server.mjs)
-npm run test       # Vitest
+npm run test       # Vitest unit suite (vitest.config.js); what CI runs
+npm run test:live  # Vitest live suite (vitest.live.config.js); needs a running backend
 npm run build      # Production build
 npm run lint       # ESLint
 npm run preview    # Preview production build
 ```
+
+### Regenerating the figures in this document
+
+Every count, list and version above is produced by a script rather than maintained by hand.
+
+```bash
+backend/scripts/regenerate_struct_figures.sh     # migrations, modules, tests, RabbitMQ, Redis, versions
+frontend/scripts/regenerate_struct_figures.sh    # slices, tree, routes, dependencies, scripts, env
+backend/scripts/regenerate_schema_sql.sh         # rebuilds and verifies backend/database/schema.sql
+```
+
+Run the relevant one and paste its output back. This does not make the document self-updating; it
+makes the next correction cheap.
 
 ### Environment Variable Prefix
 

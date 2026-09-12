@@ -23,7 +23,7 @@ FE cache (TanStack Query) is always a derivative of BE API responses — never a
 
 ## 2. Denormalized Counter Policy
 
-All counters are maintained exclusively by PostgreSQL triggers defined in Flyway V16.
+All counters are maintained exclusively by PostgreSQL triggers. V16 defined the original set; a counter added later carries its own trigger in its own migration, and `stories.like_count` (V49) is the example.
 Application code (Service, Repository) **and** frontend code must never directly increment or
 decrement these counters. Display counter values from API responses only; do not compute or
 patch them client-side.
@@ -40,6 +40,7 @@ patch them client-side.
 | `reply_count` | `comments` | `trg_comment_reply_count` | `comments` (self-referential) |
 | `post_count` | `hashtags` | `trg_hashtag_post_count` | `post_hashtags` |
 | `view_count` | `stories` | `trg_story_view_count` | `story_views` |
+| `like_count` | `stories` | `trg_story_like_count` | `story_likes` (V49) |
 
 If a counter appears stale, the correct action is to recalculate from the source join table — not
 to patch the counter directly.
@@ -63,6 +64,13 @@ Tables that use soft delete via a `deleted_at TIMESTAMPTZ` column:
 | `comments` | comment |
 | `stories` | story |
 | `messages` | message (uses `is_deleted BOOLEAN` + `deleted_at`) |
+
+`posts`, `comments`, `stories` and `messages` additionally carry an independent moderation
+tombstone, which is not the same column as the owner's soft delete and must not be conflated with
+it: `posts.status_before_moderation` (V59), `messages.admin_removed_at` (V77), and
+`comments.admin_removed_at` / `stories.admin_removed_at` (V95). A row is hidden when either
+tombstone is set; an administrative restore clears only the moderation tombstone and never undoes
+an owner deletion.
 
 Rules:
 - All BE queries against soft-deleted tables must include `WHERE deleted_at IS NULL` unless
