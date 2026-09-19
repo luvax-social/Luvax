@@ -19,6 +19,7 @@
 ├── .gitmodules               # Submodule declarations (path + remote URL)
 ├── .gitignore                # Root-level ignores (no source-code ignores)
 ├── git-setup.sh              # Setup script — review before running
+├── start-app.bat             # Windows one-click launcher: docker infra, backend, frontend
 ├── backend/                  # Backend sub-project (Spring Boot)
 └── frontend/                 # Frontend sub-project (React + Vite)
 ```

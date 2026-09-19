@@ -26,3 +26,6 @@ logs/
 # transcript of a test run.
 .workspace/
 .playwright-mcp/
+
+# Brainstorming visual companion sessions
+.superpowers/
