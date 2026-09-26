@@ -15,6 +15,7 @@ Sub-project-specific rule files may refine or extend these rules; they never con
 | Event Stream | RabbitMQ | Async event delivery | No persistence guarantee |
 | FE Server Cache | TanStack Query | In-memory server state cache | Yes — rebuilt from BE API responses |
 | FE Local State | Zustand (in-memory) | Global client state (auth session, UI state) | Yes — rebuilt on next request or page load |
+| Telemetry | ClickHouse (traces, logs), Prometheus (metrics) | Observability data; never a source of truth | Yes — rebuilt from live traffic; a missed export is not replayed |
 
 **Conflict resolution rule**: If a data conflict exists between tiers, PostgreSQL is always correct.
 FE cache (TanStack Query) is always a derivative of BE API responses — never a source of truth.
@@ -154,6 +155,7 @@ media inspection at upload time.
 | Full-text search | No Elasticsearch in v1; username/hashtag search uses PostgreSQL `pg_trgm` GIN index | Search ranking is less sophisticated than a dedicated search engine |
 | Recommendation | `user_similarity` and `post_interaction_scores` populated by external ML jobs | Recommendations may lag behind recent user behavior |
 | Story expiry | Expired stories remain in the database until a cleanup job removes them | `expires_at` must always be checked; do not rely on row absence alone |
+| Observability | Traces and logs are exported over OTLP best effort, with `management.tracing.sampling.probability` at 1.0 but no delivery guarantee; ClickHouse retains traces 7 days and logs 14 days | A missed export is not replayed; a consumer outage longer than the retention window can process a redelivered event's second copy again |
 
 ---
 

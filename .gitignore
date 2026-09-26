@@ -29,3 +29,8 @@ logs/
 
 # Brainstorming visual companion sessions
 .superpowers/
+
+# Written at container startup by the official ClickHouse entrypoint into the bind-mounted
+# users.d directory (disables the "default" user in favour of CLICKHOUSE_USER); contains that
+# user's password in plaintext and must never be committed.
+observability/clickhouse/users.d/default-user.xml
