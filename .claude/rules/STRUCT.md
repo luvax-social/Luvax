@@ -20,6 +20,7 @@
 ├── .gitignore                # Root-level ignores (no source-code ignores)
 ├── git-setup.sh              # Setup script — review before running
 ├── start-app.bat             # Windows one-click launcher: docker infra, backend, frontend
+├── observability/            # Observability sub-project (OTel Collector, ClickHouse, Prometheus, Grafana)
 ├── backend/                  # Backend sub-project (Spring Boot)
 └── frontend/                 # Frontend sub-project (React + Vite)
 ```
@@ -30,6 +31,28 @@
 |-----------|------|--------|--------|
 | Backend | backend/ | https://github.com/zentech-graduation/backend.git | main |
 | Frontend | frontend/ | https://github.com/zentech-graduation/frontend.git | main |
+| Observability | observability/ | https://github.com/luvax-social/observability.git | main |
+
+### Observability
+
+`observability/` holds the Phase 1 monitoring stack, run locally behind a Compose profile (`compose.local.yaml`) and deployed in production as a separate Coolify resource (`compose.prod.yaml`).
+See `observability/README.md` for the full runbook.
+Its remote has no history under the `zentech-graduation` org to redirect from (unlike backend and frontend, which were renamed into `luvax-social` and kept the old org's URL working); it was created directly under `luvax-social`, so its `.gitmodules` URL does not follow the `zentech-graduation/*` pattern the other two do.
+
+| Service | Image | Role |
+|---|---|---|
+| `otel-collector` | `otel/opentelemetry-collector-contrib:0.161.0` | OTLP traces/logs in (4317 grpc, 4318 http), container log discovery, exports to ClickHouse |
+| `clickhouse` | `clickhouse/clickhouse-server:26.3.33.24` | `otel.otel_logs` (14d TTL) and `otel.otel_traces` (7d TTL); HTTP on 8123 |
+| `prometheus` | `prom/prometheus:v3.15.0` | Scrapes the backend's management port (8081) and every exporter below; UI on 9090 |
+| `grafana` | `grafana/grafana:13.2.2` | Ten dashboards, Discord-backed alerting; UI on 3000, the only public component in production |
+| `docker-socket-proxy` | `tecnativa/docker-socket-proxy:v0.5.0` | Read-only Docker API for the collector's container-log discovery |
+| `postgres-exporter`, `redis-exporter`, `elasticsearch-exporter`, `node-exporter`, `cadvisor` | see `observability/compose.local.yaml` | Infrastructure metrics for the dashboards above |
+
+**ClickHouse is pinned to the 26.3 LTS line (`26.3.33.24`) and must not move past 26.5.**
+From 26.6 the official build's default target is x86-64-v3 (AVX2); the production host's CPU has no AVX2, and `26.8.10.6` was reproduced crashing with `SIGILL` there.
+This constraint outlives Phase 1: Phase 2 analytics work on the same ClickHouse instance inherits it until the host's CPU model changes.
+
+Traces and logs are best effort and disposable, rebuilt from nothing but live traffic; PostgreSQL stays the only source of truth (`GLOBAL_RULES.md` §1).
 
 ---
 
@@ -47,7 +70,7 @@ Full detail: `backend/.claude/rules/struct.md`
 | Cache | Redis |
 | Message Broker | RabbitMQ |
 | Build | Maven (`./mvnw`) |
-| Migrations | Flyway (111 migrations, V01-V111) |
+| Migrations | Flyway (126 migrations, V01-V126) |
 | Resilience | Resilience4j (Spring Cloud 2025.1.1) |
 | Security | Spring Security 6, JWT |
 | ORM | Spring Data JPA / Hibernate |
@@ -87,7 +110,7 @@ See `backend/.claude/rules/struct.md` for each module's sub-packages and
 
 ### Infrastructure Services
 
-- **PostgreSQL** (docker-compose): canonical data store; 111 Flyway migrations, sixteen of which build indexes `CONCURRENTLY` behind a `.sql.conf` sidecar
+- **PostgreSQL** (docker-compose): canonical data store; 126 Flyway migrations, nineteen of which build or drop indexes `CONCURRENTLY` behind a `.sql.conf` sidecar
 - **Redis** (docker-compose): token blacklist, one-time email and password-reset tokens, rate limiting.
   Refresh tokens are SHA-256 hashed in PostgreSQL, not Redis
 - **RabbitMQ** (docker-compose): async event delivery. 6 exchanges and 20 durable queues declared in `RabbitMqTopologyConfig`, driving 14 `@RabbitListener` consumers. `social.events` is the topic bus and `social.events.dlx` the dead-letter exchange; `comment.live.events`, `message.live.events`, `notification.live.events` and `post.live.events` are fanout tiers fed by exchange-to-exchange bindings. The 14 consumer classes carry 21 `@RabbitListener` methods between them
@@ -98,9 +121,9 @@ See `backend/.claude/rules/struct.md` for each module's sub-packages and
 V01 extensions/enums → V02 users/auth → V03 settings/push → V04 social → V05 media →
 V06 posts → V07 comments → V08 hashtags → V09 stories → V10 notifications → V11 messages →
 V12 reports → V13 admin → V14 recommendation → V15 indexes → V16 triggers/functions →
-V17 views → V18 metadata config tables → V19-V111 incremental schema evolution
+V17 views → V18 metadata config tables → V19-V126 incremental schema evolution
 
-The full V01-V111 table is in `backend/.claude/rules/struct.md`; it is maintained there rather than
+The full V01-V126 table is in `backend/.claude/rules/struct.md`; it is maintained there rather than
 duplicated here, because a list in two places drifts in one of them.
 
 ### Redis Key Patterns

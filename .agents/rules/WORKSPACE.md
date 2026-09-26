@@ -2,12 +2,13 @@
 
 ## Structure
 
-This is a monorepo workspace containing two independent sub-projects managed as Git Submodules.
+This is a monorepo workspace containing three independent sub-projects managed as Git Submodules.
 
 | Sub-project | Path | Tech Stack | Own Rules |
 |-------------|------|------------|-----------|
 | Backend     | backend/ | Spring Boot 4, Java 21, PostgreSQL | backend/.claude/rules/ |
 | Frontend    | frontend/ | React 19, Vite 8, Tailwind CSS v4 | frontend/.claude/rules/ |
+| Observability | observability/ | OTel Collector, ClickHouse, Prometheus, Grafana | none - see root STRUCT.md |
 
 ## Git Model
 
@@ -21,5 +22,6 @@ This is a monorepo workspace containing two independent sub-projects managed as 
 1. Read AGENT_ROUTER.md to determine which sub-project rules to load for your task.
 2. For BE tasks: navigate to backend/ and read its .claude/rules/ before acting.
 3. For FE tasks: navigate to frontend/ and read its .claude/rules/ before acting.
-4. For cross-cutting tasks: read both sub-project rule sets.
-5. For any DB migration or data layer change: re-read GLOBAL_RULES.md in this directory.
+4. For observability tasks: read the root STRUCT.md Observability subsection and observability/README.md before acting.
+5. For cross-cutting tasks: read every sub-project's rule set that applies.
+6. For any DB migration or data layer change: re-read GLOBAL_RULES.md in this directory.
