@@ -16,6 +16,9 @@ This is a monorepo workspace containing three independent sub-projects managed a
 - All business logic commits go to the sub-project repos via their submodule directories.
 - The root repo tracks: agent configuration, STRUCT.md, and submodule commit pointers only.
 - Never commit source code changes to the root repo.
+- Never create, use or keep a git worktree in this repository or any submodule. All work
+  happens in the main checkout. `.worktrees/` is git-ignored at every level for this reason;
+  a directory found there is leftover state, not a place to work from.
 
 ## Agent Working Instructions
 
