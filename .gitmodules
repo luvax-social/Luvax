@@ -5,3 +5,6 @@
 [submodule "backend"]
 	path = backend
 	url = https://github.com/zentech-graduation/backend.git
+[submodule "observability"]
+	path = observability
+	url = https://github.com/luvax-social/observability.git
