@@ -20,7 +20,7 @@
 ├── .gitignore                # Root-level ignores (no source-code ignores)
 ├── git-setup.sh              # Setup script — review before running
 ├── start-app.bat             # Windows one-click launcher: docker infra, backend, frontend
-├── observability/            # Phase 1 monitoring stack (OTel Collector, ClickHouse, Prometheus, Grafana)
+├── observability/            # Observability sub-project (OTel Collector, ClickHouse, Prometheus, Grafana)
 ├── backend/                  # Backend sub-project (Spring Boot)
 └── frontend/                 # Frontend sub-project (React + Vite)
 ```
@@ -31,11 +31,13 @@
 |-----------|------|--------|--------|
 | Backend | backend/ | https://github.com/zentech-graduation/backend.git | main |
 | Frontend | frontend/ | https://github.com/zentech-graduation/frontend.git | main |
+| Observability | observability/ | https://github.com/luvax-social/observability.git | main |
 
 ### Observability
 
-Root-owned, not a submodule: `observability/` holds the Phase 1 monitoring stack, run locally behind a Compose profile (`compose.local.yaml`) and deployed in production as a separate Coolify resource (`compose.prod.yaml`).
+`observability/` holds the Phase 1 monitoring stack, run locally behind a Compose profile (`compose.local.yaml`) and deployed in production as a separate Coolify resource (`compose.prod.yaml`).
 See `observability/README.md` for the full runbook.
+Its remote has no history under the `zentech-graduation` org to redirect from (unlike backend and frontend, which were renamed into `luvax-social` and kept the old org's URL working); it was created directly under `luvax-social`, so its `.gitmodules` URL does not follow the `zentech-graduation/*` pattern the other two do.
 
 | Service | Image | Role |
 |---|---|---|
