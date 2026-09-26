@@ -30,6 +30,9 @@ logs/
 # Brainstorming visual companion sessions
 .superpowers/
 
+# Leftover agent git worktrees; never created deliberately, see WORKSPACE.md Git Model
+.worktrees/
+
 # Written at container startup by the official ClickHouse entrypoint into the bind-mounted
 # users.d directory (disables the "default" user in favour of CLICKHOUSE_USER); contains that
 # user's password in plaintext and must never be committed.
