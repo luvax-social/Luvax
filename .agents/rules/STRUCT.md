@@ -29,8 +29,8 @@
 
 | Submodule | Path | Remote | Branch |
 |-----------|------|--------|--------|
-| Backend | backend/ | https://github.com/zentech-graduation/backend.git | main |
-| Frontend | frontend/ | https://github.com/zentech-graduation/frontend.git | main |
+| Backend | backend/ | https://github.com/luvax-social/backend.git | main |
+| Frontend | frontend/ | https://github.com/luvax-social/frontend.git | main |
 | Observability | observability/ | https://github.com/luvax-social/observability.git | main |
 
 ### Observability

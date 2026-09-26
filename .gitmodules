@@ -1,10 +1,10 @@
 [submodule "frontend"]
 	path = frontend
-	url = https://github.com/zentech-graduation/frontend.git
+	url = https://github.com/luvax-social/frontend.git
 
 [submodule "backend"]
 	path = backend
-	url = https://github.com/zentech-graduation/backend.git
+	url = https://github.com/luvax-social/backend.git
 [submodule "observability"]
 	path = observability
 	url = https://github.com/luvax-social/observability.git
